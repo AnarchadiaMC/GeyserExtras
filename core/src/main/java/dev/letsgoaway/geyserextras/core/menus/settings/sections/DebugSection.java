@@ -51,12 +51,12 @@ public class DebugSection extends Section {
         menu.add(new Label("Is Premium Skin? " + data.isPremiumSkin()));
 
         menu.add(new SubSectionLabel("Player Data"));
-        menu.add(new Label("Average Ping: " + player.getCooldownHandler().getAveragePing()));
-        menu.add(new Label("Average Ping (Ticks): " + (player.getCooldownHandler().getAveragePing() / 50)));
+        menu.add(new Label("Average Ping: " + player.getAveragePing()));
+        menu.add(new Label("Average Ping (Ticks): " + (player.getAveragePing() / 50)));
 
-        menu.add(new Label("Last Ping: " + player.getCooldownHandler().getLastPing()));
-        menu.add(new Label("Ping Sample: " + player.getCooldownHandler().getPingSample()));
-        menu.add(new Label("Ping Sample Size: " + player.getCooldownHandler().getPingSampleSize()));
+        menu.add(new Label("Last Ping: " + player.getLastPing()));
+        menu.add(new Label("Ping Sample: " + player.getPingSample()));
+        menu.add(new Label("Ping Sample Size: " + player.getPingSampleSize()));
 
         menu.add(new SubSectionLabel("GeyserExtras Info"));
         menu.add(new Label("Version: " + PluginVersion.GE_VERSION));

@@ -1,7 +1,6 @@
 package dev.letsgoaway.geyserextras.core.injectors.bedrock;
 
 import dev.letsgoaway.geyserextras.core.ExtrasPlayer;
-import dev.letsgoaway.geyserextras.core.injectors.GeyserHandler;
 import dev.letsgoaway.geyserextras.core.preferences.bindings.Action;
 import dev.letsgoaway.geyserextras.core.preferences.bindings.Remappable;
 import org.cloudburstmc.protocol.bedrock.packet.InteractPacket;
@@ -20,17 +19,6 @@ public class BedrockInteractInjector extends BedrockInteractTranslator {
     public void translate(GeyserSession session, InteractPacket packet) {
         ExtrasPlayer player = ExtrasPlayer.get(session);
         if (!packet.getAction().equals(InteractPacket.Action.OPEN_INVENTORY)) {
-            if (GE.getConfig().isEnableCustomCooldown()) {
-                // seems like this is handled properly in BedrockInventoryTransactionTranslator
-                // but ill handle it here anyway
-                if (packet.getAction().equals(InteractPacket.Action.DAMAGE)) {
-                    player.getCooldownHandler().setDigTicks(-1);
-                    player.getCooldownHandler().setLastSwingTime(System.currentTimeMillis());
-                    player.hungerSprintCancel();
-                } else if (packet.getAction().equals(InteractPacket.Action.MOUSEOVER)) {
-                    player.getCooldownHandler().setLastMouseoverID(packet.getRuntimeEntityId());
-                }
-            }
             super.translate(session, packet);
         } else {
             if ((player.getPreferences().isEnableDoubleClickShortcut() && GE.getConfig().isEnableGeyserExtrasMenu())

@@ -1,15 +1,12 @@
 package dev.letsgoaway.geyserextras.core.injectors;
 
 import dev.letsgoaway.geyserextras.ServerType;
-import dev.letsgoaway.geyserextras.core.ExtrasPlayer;
 import dev.letsgoaway.geyserextras.core.parity.java.combat.SoundReplacer;
 import dev.letsgoaway.geyserextras.core.commands.CommandExecutor;
 import dev.letsgoaway.geyserextras.core.injectors.bedrock.*;
 import dev.letsgoaway.geyserextras.core.injectors.java.*;
-import dev.letsgoaway.geyserextras.core.utils.IdUtils;
 import org.cloudburstmc.protocol.bedrock.packet.*;
 import org.geysermc.geyser.registry.Registries;
-import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundDisconnectPacket;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundServerLinksPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerInfoUpdatePacket;
@@ -18,15 +15,9 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundTickingStatePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundEntityEventPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveEntitiesPacket;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundUpdateAttributesPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundAddEntityPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundOpenScreenPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSoundPacket;
-
-import javax.annotation.Nullable;
-import java.util.UUID;
-
-import static dev.letsgoaway.geyserextras.core.GeyserExtras.GE;
 
 public class GeyserHandler {
     public static void register() {
@@ -43,8 +34,6 @@ public class GeyserHandler {
         // Shield stuff
         Registries.JAVA_PACKET_TRANSLATORS.register(ClientboundEntityEventPacket.class, new JavaEntityEventInjector());
         Registries.JAVA_PACKET_TRANSLATORS.register(ClientboundOpenScreenPacket.class, new JavaOpenScreenInjector());
-        // Cooldown
-        Registries.JAVA_PACKET_TRANSLATORS.register(ClientboundUpdateAttributesPacket.class, new JavaUpdateAttributesInjector());
         // Ticking state
         Registries.JAVA_PACKET_TRANSLATORS.register(ClientboundTickingStatePacket.class, new JavaTickingStateInjector());
         // Auto reconnect (doesn't work, should look into)
@@ -70,7 +59,6 @@ public class GeyserHandler {
         // Cooldown
         Registries.BEDROCK_PACKET_TRANSLATORS.register(PlayerAuthInputPacket.class, new BedrockPlayerAuthInputInjector());
         Registries.BEDROCK_PACKET_TRANSLATORS.register(InventoryTransactionPacket.class, new BedrockInventoryTransactionInjector());
-        Registries.BEDROCK_PACKET_TRANSLATORS.register(MobEquipmentPacket.class, new BedrockMobEquipmentInjector());
 
         // Emotes
         Registries.BEDROCK_PACKET_TRANSLATORS.register(EmoteListPacket.class, new BedrockEmoteListInjector());

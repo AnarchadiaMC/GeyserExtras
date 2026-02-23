@@ -27,7 +27,7 @@ A plugin which attempts to unify features for Bedrock Edition players on Java Ed
 
 # Features
 ## Combat
-- Changes the Attack Cooldown to look like Java Editions
+- ~~Changes the Attack Cooldown to look like Java Editions~~ This feature has been added into the GeyserIntegratedPack
 - Adds the Java Edition combat sounds
 ## Parity
 - Sends emote chat to Java players (can be muted by `/muteemotechat`)

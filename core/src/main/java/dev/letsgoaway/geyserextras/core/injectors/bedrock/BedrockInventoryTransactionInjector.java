@@ -1,7 +1,6 @@
 package dev.letsgoaway.geyserextras.core.injectors.bedrock;
 
 import dev.letsgoaway.geyserextras.core.ExtrasPlayer;
-import dev.letsgoaway.geyserextras.core.injectors.GeyserHandler;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.cloudburstmc.protocol.bedrock.data.definitions.BlockDefinition;
 import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventoryTransactionType;
@@ -35,7 +34,6 @@ public class BedrockInventoryTransactionInjector extends BedrockInventoryTransac
         ExtrasPlayer player = ExtrasPlayer.get(session);
 
         //SERVER.log("INVENTORY TRANSACTION PACKET: " + packet.getTransactionType().name() + " " + packet.getActionType() + " " + (packet.getBlockPosition() == null ? "null" : packet.getBlockPosition().toString()) + " " + packet.getClickPosition().toString());
-        //SERVER.log(String.valueOf(System.currentTimeMillis() - player.getCooldownHandler().getLastBlockRightClickTime()));
         InventoryTransactionType type = packet.getTransactionType();
         // Trying to do a block interaction, but we should disable the shield first
 
@@ -47,18 +45,7 @@ public class BedrockInventoryTransactionInjector extends BedrockInventoryTransac
 
             // Entity Damage
             if (packet.getActionType() == 1) {
-                player.getCooldownHandler().setDigTicks(-1);
-                player.getCooldownHandler().setLastSwingTime(System.currentTimeMillis());
-
                 player.hungerSprintCancel();
-            }
-        }
-        if (type.equals(InventoryTransactionType.ITEM_USE)) {
-            // Item use
-            if (packet.getActionType() == 2) { // Block Breaking
-                // Disable the GeyserExtras cooldown until next player action to
-                // match java
-                player.getCooldownHandler().setDigTicks(5);
             }
         }
     }

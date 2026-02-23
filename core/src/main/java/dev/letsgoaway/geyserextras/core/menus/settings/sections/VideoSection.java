@@ -46,10 +46,6 @@ public class VideoSection extends Section {
                     new ArrayList<>(cooldownTypes.keySet()), playerOption, (str) -> {
                 session.getPreferencesCache().setCooldownPreference(cooldownTypes.get(str));
             }));
-            menu.add(new Slider(player.translateGE("ge.settings.video.attackIndicatorFPS"), 5, 250, 5, player.getPreferences().getIndicatorUpdateRate(), player::startCombatTickThread));
-            menu.add(new Toggle(player.translateGE("ge.settings.video.adjustCooldownWithPing"), player.getPreferences().isAdjustCooldownWithPing(), (b) -> {
-                player.getPreferences().setAdjustCooldownWithPing(b);
-            }));
         }
         menu.add(new MappedDropdown<>(player.translateGE("ge.settings.video.lockedCameraPerspective"),
                 Perspectives.buildTranslations(session),

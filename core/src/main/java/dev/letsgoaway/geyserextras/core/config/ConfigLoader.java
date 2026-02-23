@@ -1,7 +1,6 @@
 package dev.letsgoaway.geyserextras.core.config;
 
 import dev.letsgoaway.geyserextras.ServerType;
-import dev.letsgoaway.geyserextras.core.parity.java.blockdisplay.BlockDisplayEntity;
 import dev.letsgoaway.geyserextras.core.utils.IsAvailable;
 import org.spongepowered.configurate.CommentedConfigurationNode;
 import org.spongepowered.configurate.ConfigurateException;
@@ -30,6 +29,7 @@ public class ConfigLoader {
             .addVersion(2, oneToTwo())
             .addVersion(3, twoToThree())
             .addVersion(4, threeToFour())
+            .addVersion(5, fourToFive())
 
             .build();
 
@@ -83,13 +83,6 @@ public class ConfigLoader {
             GE.setConfig(new GeyserExtrasConfig());
         }
 
-        try {
-            if (GE.getConfig().isEnableCustomCooldown()) {
-                updateGeyserConfig();
-            }
-        } catch (ConfigurateException e) {
-            SERVER.warn("Could not update Geyser config!\n" + e.rawMessage());
-        }
         if (IsAvailable.floodgate() && GE.getConfig().isEnableGeyserExtrasMenu()) {
             SERVER.warn("WARNING: Floodgate is installed, so GeyserExtras Settings will not");
             SERVER.warn("show up in the Game Settings menu due to how forms work on GeyserMC.");
@@ -133,15 +126,10 @@ public class ConfigLoader {
                 .build();
     }
 
-    public static void updateGeyserConfig() throws ConfigurateException {
-        Path configPath = GE.geyserApi.configDirectory().resolve("config.yml");
-        YamlConfigurationLoader loader = YamlConfigurationLoader.builder().file(configPath.toFile()).build();
-
-        CommentedConfigurationNode geyserConfig = loader.load();
-        geyserConfig.node("gameplay").node("show-cooldown").set("title");
-        SERVER.log("Enabling GeyserIntegratedPack...");
-        geyserConfig.node("gameplay").node("enable-integrated-pack").set(true);
-
-        loader.save(geyserConfig);
+    // no changes, added packet events / mannequin cape workaround
+    private static ConfigurationTransformation fourToFive() {
+        return ConfigurationTransformation.builder()
+                .addAction(NodePath.path("enable-custom-cooldown"), TransformAction.remove())
+                .build();
     }
 }

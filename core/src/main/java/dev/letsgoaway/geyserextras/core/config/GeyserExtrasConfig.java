@@ -33,10 +33,6 @@ public final class GeyserExtrasConfig {
             """)
     private boolean enableGeyserExtrasMenu = true;
 
-    @Comment("""
-            Enable the Java Edition styled cooldown.""")
-    private boolean enableCustomCooldown = true;
-
     @Comment("Enable the Java Edition combat sounds.")
     private boolean enableJavaCombatSounds = true;
 

@@ -6,16 +6,12 @@ import dev.letsgoaway.geyserextras.core.form.BedrockMenu;
 import dev.letsgoaway.geyserextras.core.form.BedrockModal;
 import dev.letsgoaway.geyserextras.core.locale.GELocale;
 import dev.letsgoaway.geyserextras.core.parity.bedrock.EmoteUtils;
-import dev.letsgoaway.geyserextras.core.parity.java.combat.CooldownHandler;
 import dev.letsgoaway.geyserextras.core.parity.java.menus.serverlinks.ServerLinksData;
 import dev.letsgoaway.geyserextras.core.parity.java.menus.tablist.TabListData;
 import dev.letsgoaway.geyserextras.core.preferences.PreferencesData;
 import dev.letsgoaway.geyserextras.core.preferences.bindings.Remappable;
-import dev.letsgoaway.geyserextras.core.protocol.CapeLoader;
 import dev.letsgoaway.geyserextras.core.utils.IdUtils;
 import dev.letsgoaway.geyserextras.core.utils.IsAvailable;
-import dev.letsgoaway.geyserextras.core.utils.StringUtils;
-import dev.letsgoaway.geyserextras.core.utils.TickMath;
 import lombok.Getter;
 import lombok.Setter;
 import net.kyori.adventure.text.Component;
@@ -31,7 +27,6 @@ import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.session.cache.BossBar;
 import org.geysermc.geyser.text.MinecraftLocale;
 import org.geysermc.geyser.util.DimensionUtils;
-import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -49,8 +44,6 @@ import static dev.letsgoaway.geyserextras.core.GeyserExtras.SERVER;
 
 //
 public class ExtrasPlayer {
-    @Getter
-    private final CooldownHandler cooldownHandler;
     @Getter
     private final TabListData tabListData;
     @Getter
@@ -70,8 +63,6 @@ public class ExtrasPlayer {
     @Setter
     @Getter
     private ArrayList<UUID> emotesList;
-    @Getter
-    private ScheduledFuture<?> combatTickThread;
     @Getter
     @Setter
     private ScheduledFuture<?> doubleClickShortcutFuture;
@@ -104,11 +95,19 @@ public class ExtrasPlayer {
     @Getter
     private boolean emoting = false;
 
+    @Getter
+    private double averagePing = 0.0f;
+    @Getter
+    private long pingSample = 0;
+    @Getter
+    private long pingSampleSize = 0;
+    @Getter
+    private int lastPing = -1;
+
     public ExtrasPlayer(GeyserConnection connection) {
         this.session = (GeyserSession) connection;
         this.javaUUID = connection.javaUuid();
         this.bedrockXUID = connection.xuid();
-        cooldownHandler = new CooldownHandler(this);
         tabListData = new TabListData(this);
         serverLinksData = new ServerLinksData(this);
         preferences = new PreferencesData(this);
@@ -127,8 +126,6 @@ public class ExtrasPlayer {
             SkinSaver.save(this);
         }
 
-        // Update the cooldown at a faster rate for smoother animations at fast periods
-        startCombatTickThread(getPreferences().getIndicatorUpdateRate());
         // Java UUID is null until login
         javaUUID = session.javaUuid();
     }
@@ -146,24 +143,7 @@ public class ExtrasPlayer {
         return diagnostics != null ? "FPS: " + Math.round(diagnostics.getAvgFps()) : "";
     }
 
-
-    public void startCombatTickThread(float updateRate) {
-        getPreferences().setIndicatorUpdateRate(updateRate);
-        if (combatTickThread != null) {
-            combatTickThread.cancel(false);
-        }
-        combatTickThread = session.getTickEventLoop().scheduleAtFixedRate(() -> {
-            if (GE.getConfig().isEnableCustomCooldown()) {
-                getCooldownHandler().tick();
-            }
-        }, TickMath.toNanos(updateRate), TickMath.toNanos(updateRate), TimeUnit.NANOSECONDS);
-    }
-
     public void onDisconnect() {
-        if (combatTickThread != null) {
-            combatTickThread.cancel(false);
-            combatTickThread = null;
-        }
         if (doubleClickShortcutFuture != null) {
             doubleClickShortcutFuture.cancel(false);
             doubleClickShortcutFuture = null;
@@ -221,39 +201,18 @@ public class ExtrasPlayer {
         if (fpsBossBar == null && preferences.isShowFPS() && diagnostics != null) {
             createFpsBossBar();
         }
+
+        calculateAveragePing();
     }
 
-    public void sendTitle(String title, String subtitle, int fadeIn, int stay, int fadeOut) {
-        SetTitlePacket timesPacket = new SetTitlePacket();
-        timesPacket.setText("");
-        timesPacket.setType(SetTitlePacket.Type.TIMES);
-        timesPacket.setFadeInTime(fadeIn);
-        timesPacket.setStayTime(stay);
-        timesPacket.setFadeOutTime(fadeOut);
-        timesPacket.setXuid("");
-        timesPacket.setPlatformOnlineId("");
-        session.sendUpstreamPacket(timesPacket);
-        SetTitlePacket titlePacket = new SetTitlePacket();
-        titlePacket.setType(SetTitlePacket.Type.TITLE);
-        titlePacket.setText(title.isEmpty() ? " " : title);
-        titlePacket.setXuid("");
-        titlePacket.setPlatformOnlineId("");
-        session.sendUpstreamPacket(titlePacket);
-        SetTitlePacket subtitlePacket = new SetTitlePacket();
-        subtitlePacket.setType(SetTitlePacket.Type.SUBTITLE);
-        subtitlePacket.setText(subtitle);
-        subtitlePacket.setXuid("");
-        subtitlePacket.setPlatformOnlineId("");
-        session.sendUpstreamPacket(subtitlePacket);
-    }
-
-    public void sendActionbarTitle(String title) {
-        SetTitlePacket titlePacket = new SetTitlePacket();
-        titlePacket.setType(SetTitlePacket.Type.ACTIONBAR_JSON);
-        titlePacket.setText("{ \"rawtext\": [ { \"text\":\"" + StringUtils.escape(title) + "\" } ] }");
-        titlePacket.setXuid("");
-        titlePacket.setPlatformOnlineId("");
-        session.sendUpstreamPacket(titlePacket);
+    private void calculateAveragePing() {
+        int ping = session.ping();
+        if (ping != lastPing) {
+            pingSample += ping;
+            pingSampleSize++;
+            lastPing = ping;
+        }
+        averagePing = (double) pingSample / pingSampleSize;
     }
 
     public void sendToast(String title, String description) {
