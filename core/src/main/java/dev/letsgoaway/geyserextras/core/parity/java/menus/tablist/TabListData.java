@@ -8,6 +8,7 @@ import org.geysermc.geyser.text.ChatColor;
 import org.geysermc.geyser.translator.text.MessageTranslator;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 
+import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.UUID;
 
@@ -27,11 +28,45 @@ public class TabListData {
         players = new LinkedHashMap<>();
     }
 
-    public static String getPlayerListName(PlayerListEntry entry) {
-        if (entry.getDisplayName() == null && entry.getProfile() != null) {
-            return ChatColor.DARK_GRAY + entry.getProfile().getName();
+    // Cached reflection to avoid classloader conflicts with Component type
+    private static final Method GET_DISPLAY_NAME;
+    private static final Method CONVERT_MESSAGE;
+
+    static {
+        Method getDisplayName = null;
+        Method convertMessage = null;
+        try {
+            getDisplayName = PlayerListEntry.class.getMethod("getDisplayName");
+            for (Method m : MessageTranslator.class.getDeclaredMethods()) {
+                if (m.getName().equals("convertMessage") && m.getParameterCount() == 1) {
+                    Class<?>[] params = m.getParameterTypes();
+                    if (params[0].getSimpleName().equals("Component")) {
+                        convertMessage = m;
+                        convertMessage.setAccessible(true);
+                        break;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
         }
-        return MessageTranslator.convertMessage(entry.getDisplayName());
+        GET_DISPLAY_NAME = getDisplayName;
+        CONVERT_MESSAGE = convertMessage;
+    }
+
+    public static String getPlayerListName(PlayerListEntry entry) {
+        try {
+            Object displayName = GET_DISPLAY_NAME.invoke(entry);
+            if (displayName == null && entry.getProfile() != null) {
+                return ChatColor.DARK_GRAY + entry.getProfile().getName();
+            }
+            return (String) CONVERT_MESSAGE.invoke(null, displayName);
+        } catch (Exception e) {
+            // Fallback to profile name if reflection fails
+            if (entry.getProfile() != null) {
+                return ChatColor.DARK_GRAY + entry.getProfile().getName();
+            }
+            return "";
+        }
     }
 
     public static String getPlayerListHead(PlayerListEntry entry) {
