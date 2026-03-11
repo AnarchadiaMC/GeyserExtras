@@ -9,12 +9,38 @@ import org.geysermc.geyser.session.GeyserSession;
 import org.geysermc.geyser.translator.protocol.Translator;
 import org.geysermc.geyser.translator.protocol.bedrock.entity.player.BedrockInteractTranslator;
 
+import java.lang.reflect.Method;
 import java.util.concurrent.TimeUnit;
 
 import static dev.letsgoaway.geyserextras.core.GeyserExtras.GE;
 
 @Translator(packet = InteractPacket.class)
 public class BedrockInteractInjector extends BedrockInteractTranslator {
+
+    // Cached reflection to avoid classloader conflicts with Geyser's Entity class
+    private static final Method GET_GEYSER_ID;
+
+    static {
+        Method getGeyserId = null;
+        try {
+            Class<?> entityClass = Class.forName("org.geysermc.geyser.entity.type.Entity");
+            try {
+                getGeyserId = entityClass.getMethod("getGeyserId");
+            } catch (NoSuchMethodException e) {
+                // Try newer GeyserMC method name
+                try {
+                    getGeyserId = entityClass.getMethod("geyserId");
+                } catch (NoSuchMethodException ignored) {
+                }
+            }
+            if (getGeyserId != null) {
+                getGeyserId.setAccessible(true);
+            }
+        } catch (Exception ignored) {
+        }
+        GET_GEYSER_ID = getGeyserId;
+    }
+
     @Override
     public void translate(GeyserSession session, InteractPacket packet) {
         ExtrasPlayer player = ExtrasPlayer.get(session);
@@ -50,14 +76,24 @@ public class BedrockInteractInjector extends BedrockInteractTranslator {
                 return;
             }
             Entity entity;
-            if (packet.getRuntimeEntityId() == session.getPlayerEntity().getGeyserId()) {
-                //Player is not in entity cache
-                entity = session.getPlayerEntity();
-            } else {
-                entity = session.getEntityCache().getEntityByGeyserId(packet.getRuntimeEntityId());
+            try {
+                long geyserId = GET_GEYSER_ID != null ? (long) GET_GEYSER_ID.invoke(session.getPlayerEntity()) : session.getPlayerEntity().getEntityId();
+                if (packet.getRuntimeEntityId() == geyserId) {
+                    entity = session.getPlayerEntity();
+                } else {
+                    entity = session.getEntityCache().getEntityByGeyserId(packet.getRuntimeEntityId());
+                }
+            } catch (Exception e) {
+                // Fallback to entityId if reflection fails
+                if (packet.getRuntimeEntityId() == session.getPlayerEntity().getEntityId()) {
+                    entity = session.getPlayerEntity();
+                } else {
+                    entity = session.getEntityCache().getEntityByGeyserId(packet.getRuntimeEntityId());
+                }
             }
-            if (entity == null)
+            if (entity == null) {
                 return;
+            }
             player.getPreferences().getAction(bind).run(player);
         }
     }

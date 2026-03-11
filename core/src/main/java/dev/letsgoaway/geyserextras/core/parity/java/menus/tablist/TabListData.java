@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.UUID;
 
 public class TabListData {
+
     private final ExtrasPlayer player;
     @Getter
     private final LinkedHashMap<UUID, PlayerListEntry> players;
@@ -36,7 +37,13 @@ public class TabListData {
         Method getDisplayName = null;
         Method convertMessage = null;
         try {
-            getDisplayName = PlayerListEntry.class.getMethod("getDisplayName");
+            // Try standard @Data accessor first (older mcprotocollib)
+            try {
+                getDisplayName = PlayerListEntry.class.getMethod("getDisplayName");
+            } catch (NoSuchMethodException e) {
+                // Try fluent @Accessors(fluent = true) accessor (newer mcprotocollib)
+                getDisplayName = PlayerListEntry.class.getMethod("displayName");
+            }
             for (Method m : MessageTranslator.class.getDeclaredMethods()) {
                 if (m.getName().equals("convertMessage") && m.getParameterCount() == 1) {
                     Class<?>[] params = m.getParameterTypes();
@@ -72,7 +79,6 @@ public class TabListData {
     public static String getPlayerListHead(PlayerListEntry entry) {
         return "https://starlightskins.lunareclipse.studio/render/pixel/" + getPlayerListID(entry.getProfileId()) + "/face?cameraWidth=8";
     }
-
 
     private static String getPlayerListID(UUID profileID) {
         long XUID = IdUtils.getBedrockXUID(profileID);

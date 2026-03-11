@@ -30,6 +30,7 @@ import org.geysermc.geyser.util.DimensionUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.lang.reflect.Method;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import static dev.letsgoaway.geyserextras.core.GeyserExtras.SERVER;
 
 //
 public class ExtrasPlayer {
+
     @Getter
     private final TabListData tabListData;
     @Getter
@@ -159,7 +161,6 @@ public class ExtrasPlayer {
         session.transfer(session.joinAddress(), session.joinPort());
     }
 
-
     public void hungerSprintCancel() {
         // todo: figure out how to recreate this option with geyser codebase
     }
@@ -192,11 +193,9 @@ public class ExtrasPlayer {
             session.camera().hideElement(GuiElement.PAPER_DOLL);
         }
 
-
         if (session.getDimensionType().isNetherLike() && session.camera().fogEffects().contains(DimensionUtils.BEDROCK_FOG_HELL)) {
             session.camera().removeFog(DimensionUtils.BEDROCK_FOG_HELL);
         }
-
 
         if (fpsBossBar == null && preferences.isShowFPS() && diagnostics != null) {
             createFpsBossBar();
@@ -272,9 +271,40 @@ public class ExtrasPlayer {
         this.tickrate = tickrate;
     }
 
+    // Cached reflection to avoid classloader conflicts with Geyser's Entity class
+    private static final Method GET_GEYSER_ID;
+
+    static {
+        Method getGeyserId = null;
+        try {
+            // Try to find getGeyserId() method on Entity class (Older GeyserMC)
+            Class<?> entityClass = Class.forName("org.geysermc.geyser.entity.type.Entity");
+            try {
+                getGeyserId = entityClass.getMethod("getGeyserId");
+            } catch (NoSuchMethodException e) {
+                // Try newer GeyserMC method name
+                try {
+                    getGeyserId = entityClass.getMethod("geyserId");
+                } catch (NoSuchMethodException ignored) {
+                }
+            }
+            if (getGeyserId != null) {
+                getGeyserId.setAccessible(true);
+            }
+        } catch (Exception ignored) {
+        }
+        GET_GEYSER_ID = getGeyserId;
+    }
+
     public void swingArm() {
         AnimatePacket animatePacket = new AnimatePacket();
-        animatePacket.setRuntimeEntityId(session.getPlayerEntity().getGeyserId());
+        try {
+            long entityId = GET_GEYSER_ID != null ? (long) GET_GEYSER_ID.invoke(session.getPlayerEntity()) : session.getPlayerEntity().getEntityId();
+            animatePacket.setRuntimeEntityId(entityId);
+        } catch (Exception e) {
+            // Fallback to entityId if reflection fails
+            animatePacket.setRuntimeEntityId(session.getPlayerEntity().getEntityId());
+        }
         animatePacket.setAction(AnimatePacket.Action.SWING_ARM);
         session.sendUpstreamPacket(animatePacket);
     }
@@ -286,6 +316,7 @@ public class ExtrasPlayer {
     public String translateGE(String lang) {
         return GELocale.translate(lang, session.locale());
     }
+
     public String translateOtherwiseGE(String lang, String otherwise) {
         return GELocale.translateOtherwise(lang, otherwise, session.locale());
     }
