@@ -4,7 +4,6 @@ import dev.letsgoaway.geyserextras.core.ExtrasPlayer;
 import dev.letsgoaway.geyserextras.core.form.BedrockForm;
 import dev.letsgoaway.geyserextras.core.form.elements.Dropdown;
 import dev.letsgoaway.geyserextras.core.form.elements.MappedDropdown;
-import dev.letsgoaway.geyserextras.core.form.elements.Slider;
 import dev.letsgoaway.geyserextras.core.form.elements.Toggle;
 import dev.letsgoaway.geyserextras.core.locale.BedrockLocale;
 import dev.letsgoaway.geyserextras.core.preferences.Perspectives;
@@ -20,28 +19,44 @@ import java.util.List;
 
 public class VideoSection extends Section {
     private static String translateCooldown(CooldownUtils.CooldownType cooldownType, ExtrasPlayer player) {
-        switch (cooldownType) {
-            case TITLE -> {
-                return BedrockLocale.CROSSHAIR;
-            }
-            case ACTIONBAR -> {
-                return player.translate("options.attack.hotbar");
-            }
-            case DISABLED -> {
-                return BedrockLocale.OPTIONS.OFF;
+        if (cooldownType == null) {
+            return BedrockLocale.OPTIONS.OFF;
+        }
+        return switch (cooldownType.name()) {
+            case "TITLE", "CROSSHAIR" -> BedrockLocale.CROSSHAIR;
+            case "ACTIONBAR", "HOTBAR" -> player.translate("options.attack.hotbar");
+            case "DISABLED" -> BedrockLocale.OPTIONS.OFF;
+            default -> cooldownType.name();
+        };
+    }
+
+    private static boolean cooldownDisabled(CooldownUtils.CooldownType cooldownType) {
+        return cooldownType != null && "DISABLED".equals(cooldownType.name());
+    }
+
+    private static CooldownUtils.CooldownType fallbackCooldownPreference(CooldownUtils.CooldownType configured) {
+        if (configured != null && !cooldownDisabled(configured)) {
+            return configured;
+        }
+        for (CooldownUtils.CooldownType cooldownType : CooldownUtils.CooldownType.values()) {
+            if (!cooldownDisabled(cooldownType)) {
+                return cooldownType;
             }
         }
-        return "";
+        return configured;
     }
 
     @Override
     public void build(BedrockForm menu, GeyserSession session, ExtrasPlayer player) {
-        if (session.getGeyser().config().gameplay().showCooldown() != CooldownUtils.CooldownType.DISABLED) {
+        if (!cooldownDisabled(session.getGeyser().config().gameplay().cooldownType())) {
             LinkedHashMap<String, CooldownUtils.CooldownType> cooldownTypes = new LinkedHashMap<>();
             for (CooldownUtils.CooldownType cooldownType : CooldownUtils.CooldownType.values()) {
                 cooldownTypes.put(translateCooldown(cooldownType, player), cooldownType);
             }
             String playerOption = translateCooldown(session.getPreferencesCache().getCooldownPreference(), player);
+            if (!cooldownTypes.containsKey(playerOption)) {
+                playerOption = translateCooldown(fallbackCooldownPreference(session.getGeyser().config().gameplay().cooldownType()), player);
+            }
             menu.add(new Dropdown(player.translate("options.attackIndicator"),
                     new ArrayList<>(cooldownTypes.keySet()), playerOption, (str) -> {
                 session.getPreferencesCache().setCooldownPreference(cooldownTypes.get(str));

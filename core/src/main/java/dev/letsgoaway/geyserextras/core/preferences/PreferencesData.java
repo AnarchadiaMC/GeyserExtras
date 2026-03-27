@@ -30,7 +30,7 @@ public class PreferencesData {
 
     private transient final ExtrasPlayer player;
     private transient final GeyserSession session;
-    public CooldownUtils.CooldownType cooldownType = CooldownUtils.CooldownType.TITLE;
+    public CooldownUtils.CooldownType cooldownType = resolveDefaultCooldownType();
     public boolean showCoordinates;
 
     public boolean advancedTooltips = false;
@@ -183,7 +183,7 @@ public class PreferencesData {
 
     public void onLoad() {
         if (session != null) {
-            session.getPreferencesCache().setCooldownPreference(this.cooldownType);
+            session.getPreferencesCache().setCooldownPreference(sanitizeCooldownType(this.cooldownType));
             session.getPreferencesCache().setPrefersShowCoordinates(this.showCoordinates);
             session.setAdvancedTooltips(this.advancedTooltips);
             if (player.isLoggedIn()) {
@@ -195,7 +195,7 @@ public class PreferencesData {
 
     // TODO: figure out literally any better way to do this
     public void copyFrom(PreferencesData data) {
-        this.cooldownType = data.cooldownType;
+        this.cooldownType = sanitizeCooldownType(data.cooldownType);
         this.showCoordinates = data.showCoordinates;
         this.advancedTooltips = data.advancedTooltips;
         this.customSkullSkins = data.customSkullSkins;
@@ -229,5 +229,28 @@ public class PreferencesData {
             assert perspective.getGeyser() != null;
             session.camera().forceCameraPerspective(perspective.getGeyser());
         }
+    }
+
+    private static CooldownUtils.CooldownType sanitizeCooldownType(CooldownUtils.CooldownType cooldownType) {
+        return cooldownType != null ? cooldownType : resolveDefaultCooldownType();
+    }
+
+    private static CooldownUtils.CooldownType resolveDefaultCooldownType() {
+        CooldownUtils.CooldownType configured = GeyserImpl.getInstance().config().gameplay().cooldownType();
+        if (configured != null) {
+            return configured;
+        }
+
+        for (CooldownUtils.CooldownType cooldownType : CooldownUtils.CooldownType.values()) {
+            if ("CROSSHAIR".equals(cooldownType.name()) || "TITLE".equals(cooldownType.name())) {
+                return cooldownType;
+            }
+        }
+        for (CooldownUtils.CooldownType cooldownType : CooldownUtils.CooldownType.values()) {
+            if ("HOTBAR".equals(cooldownType.name()) || "ACTIONBAR".equals(cooldownType.name())) {
+                return cooldownType;
+            }
+        }
+        return CooldownUtils.CooldownType.values()[0];
     }
 }

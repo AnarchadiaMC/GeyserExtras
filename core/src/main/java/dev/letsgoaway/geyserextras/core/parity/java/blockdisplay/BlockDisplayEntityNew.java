@@ -3,12 +3,12 @@ package dev.letsgoaway.geyserextras.core.parity.java.blockdisplay;
 import dev.letsgoaway.geyserextras.core.utils.MathUtils;
 import org.cloudburstmc.math.imaginary.Quaternionf;
 import org.cloudburstmc.math.vector.Vector3f;
-import org.cloudburstmc.math.vector.Vector4f;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataTypes;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
 import org.cloudburstmc.protocol.bedrock.packet.AnimateEntityPacket;
 import org.cloudburstmc.protocol.bedrock.packet.MoveEntityDeltaPacket;
 import org.geysermc.geyser.entity.EntityDefinition;
+import org.geysermc.geyser.entity.spawn.EntitySpawnContext;
 import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.entity.type.Tickable;
 import org.geysermc.geyser.item.Items;
@@ -16,16 +16,12 @@ import org.geysermc.geyser.item.type.BlockItem;
 import org.geysermc.geyser.item.type.Item;
 import org.geysermc.geyser.level.block.type.Block;
 import org.geysermc.geyser.level.block.type.BlockState;
-import org.geysermc.geyser.session.GeyserSession;
-import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataType;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.IntEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 
 import java.text.DecimalFormat;
 import java.util.List;
-import java.util.UUID;
-
 // needs to be fixed and icbf rn so its staying here for now
 public class BlockDisplayEntityNew extends BlockDisplayBaseEntity implements Tickable {
     private static final DecimalFormat format = new DecimalFormat("#.###");
@@ -39,16 +35,16 @@ public class BlockDisplayEntityNew extends BlockDisplayBaseEntity implements Tic
 
 
 
-    public BlockDisplayEntityNew(GeyserSession session, int entityId, long geyserId, UUID uuid, EntityDefinition<?> definition, Vector3f position, Vector3f motion, float yaw, float pitch, float headYaw) {
-        super(session, entityId, geyserId, uuid, definition, position, motion, yaw, pitch, headYaw);
+    public BlockDisplayEntityNew(EntitySpawnContext context) {
+        super(context);
     }
 
     public static EntityDefinition<BlockDisplayEntityNew> buildEntityDef() {
         EntityDefinition<Entity> entityBase = EntityDefinition.builder(Entity::new)
                 .addTranslator(MetadataTypes.BYTE, Entity::setFlags)
                 .addTranslator(MetadataTypes.INT, Entity::setAir) // Air/bubbles
-                .addTranslator(MetadataTypes.OPTIONAL_COMPONENT, Entity::setDisplayName)
-                .addTranslator(MetadataTypes.BOOLEAN, Entity::setDisplayNameVisible)
+                .addTranslator(MetadataTypes.OPTIONAL_COMPONENT, Entity::setCustomName)
+                .addTranslator(MetadataTypes.BOOLEAN, Entity::setCustomNameVisible)
                 .addTranslator(MetadataTypes.BOOLEAN, Entity::setSilent)
                 .addTranslator(MetadataTypes.BOOLEAN, Entity::setGravity)
                 .addTranslator(MetadataTypes.POSE, (entity, entityMetadata) -> entity.setPose(entityMetadata.getValue()))
@@ -144,17 +140,17 @@ public class BlockDisplayEntityNew extends BlockDisplayBaseEntity implements Tic
         Block block = state.block();
         Item item = BlockItem.byBlock(block);
         if (item.javaIdentifier().contains("_door") || item.javaIdentifier().contains("_candle")) {
-            setHand(Items.AIR.newItemStack(1, null));
+            setHand(Items.AIR.newItemStack(session, 1, null));
             updateMainHand();
             return;
         }
 
         if (rendersAs2D.contains(block.javaIdentifier().toString())) {
-            setHand(Items.AIR.newItemStack(1, null));
+            setHand(Items.AIR.newItemStack(session, 1, null));
             updateMainHand();
             return;
         }
-        setHand(item.newItemStack(1, null));
+        setHand(item.newItemStack(session, 1, null));
         updateMainHand();
     }
 
